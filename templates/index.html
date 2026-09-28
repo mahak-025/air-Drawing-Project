@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Air Draw</title>
+<style>
+  body { margin: 0; background: #111014; color: #f2f0eb; font-family: -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 28px 16px 40px; }
+  h1 { font-size: 22px; margin: 0; }
+  .sub { color: #8f8c9c; font-size: 14px; margin: 4px 0 0; text-align: center; }
+  .stage { width: 100%; max-width: 700px; border-radius: 16px; overflow: hidden; border: 1px solid #2b2a33; background: #000; aspect-ratio: 4/3; }
+  .stage img, .stage video { width: 100%; display: block; }
+  video { display: none; }
+  .panel { width: 100%; max-width: 700px; background: #19181f; border: 1px solid #2b2a33; border-radius: 16px;
+    padding: 16px 18px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .swatches { display: flex; gap: 8px; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .swatch.active { border-color: #fff; }
+  .group { display: flex; align-items: center; gap: 10px; }
+  .group label { font-size: 13px; color: #8f8c9c; }
+  button.clear { margin-left: auto; background: transparent; color: #f2f0eb; border: 1px solid #2b2a33;
+    padding: 8px 14px; border-radius: 10px; font-size: 13px; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div>
+    <h1>Air Draw</h1>
+    <p class="sub">☝️ Index finger to draw · 🖐️ Open palm to erase</p>
+  </div>
+
+  <div class="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <img id="output" src="">
+  </div>
+
+  <div class="panel">
+    <div class="swatches" id="swatches"></div>
+    <div class="group">
+      <label for="brush">Brush</label>
+      <input type="range" id="brush" min="2" max="18" value="6">
+    </div>
+    <button class="clear" id="clearBtn">Clear canvas</button>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/socket.io-client@4/dist/socket.io.min.js"></script>
+<script>
+const socket = io();
+const video = document.getElementById('video');
+const output = document.getElementById('output');
+const captureCanvas = document.createElement('canvas');
+captureCanvas.width = 640;
+captureCanvas.height = 480;
+const ctx = captureCanvas.getContext('2d');
+
+navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+  .then(stream => { video.srcObject = stream; })
+  .catch(err => alert("Camera access denied: " + err.message));
+
+// har ~150ms mein ek frame server ko bhejo
+setInterval(() => {
+  if (video.readyState === 4) {
+    ctx.drawImage(video, 0, 0, 640, 480);
+    const dataURL = captureCanvas.toDataURL('image/jpeg', 0.6);
+    socket.emit('frame', dataURL);
+  }
+}, 150);
+
+socket.on('processed_frame', (dataURL) => {
+  output.src = dataURL;
+});
+
+const colors = ['#ff5c5c','#ffb84d','#ffe74d','#5cd66c','#4dd0e1','#7c5cff','#ffffff','#000000','#8b5a2b'];
+const swatchWrap = document.getElementById('swatches');
+colors.forEach((c, i) => {
+  const b = document.createElement('button');
+  b.className = 'swatch' + (i === 0 ? ' active' : '');
+  b.style.background = c;
+  b.onclick = () => {
+    [...swatchWrap.children].forEach(el => el.classList.remove('active'));
+    b.classList.add('active');
+    fetch('/set_color', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({color: c}) });
+  };
+  swatchWrap.appendChild(b);
+});
+
+document.getElementById('brush').oninput = (e) => {
+  fetch('/set_brush', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({size: e.target.value}) });
+};
+
+document.getElementById('clearBtn').onclick = () => fetch('/clear', { method: 'POST' });
+</script>
+</body>
+</html>
