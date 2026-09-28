@@ -1,7 +1,9 @@
-flask 
-flask-socketio 
-simple-websocket 
-opencv-python-headless 
-mediapipe 
+flask
+flask-socketio
+simple-websocket
+gevent
+gevent-websocket
+opencv-python-headless
+mediapipe
 numpy
- gunicorn 
+gunicorn
