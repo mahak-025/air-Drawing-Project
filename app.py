@@ -24,7 +24,7 @@ options = vision.HandLandmarkerOptions(base_options=base_options, num_hands=1, m
 detector = vision.HandLandmarker.create_from_options(options)
 
 # ---------------- STATE (single-user demo) ----------------
-W, H = 640, 480
+W, H = 320, 240
 canvas = np.zeros((H, W, 3), dtype=np.uint8)
 draw_color = (92, 92, 255)   # BGR
 brush_thickness = 6
